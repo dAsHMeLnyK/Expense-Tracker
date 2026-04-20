@@ -1,4 +1,5 @@
 using ExpenseTracker.Api.Data;
+using ExpenseTracker.Api.Services;
 using FluentValidation;
 using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,8 @@ builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
 // 3. Реєстрація бізнес-сервісів
-// builder.Services.AddScoped<IBudgetService, BudgetService>(); // Розкоментуйте, коли створите сервіс
+builder.Services.AddScoped<IBudgetService, BudgetService>();
+builder.Services.AddScoped<IReportingService, ReportingService>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
