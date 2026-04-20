@@ -34,4 +34,11 @@
     <ProjectReference Include="..\ExpenseTracker.Api\ExpenseTracker.Api.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="..\ExpenseTracker.Api\bin\$(Configuration)\net8.0\ExpenseTracker.Api.deps.json" Condition="Exists('..\ExpenseTracker.Api\bin\$(Configuration)\net8.0\ExpenseTracker.Api.deps.json')">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <Link>ExpenseTracker.Api.deps.json</Link>
+    </Content>
+  </ItemGroup>
+
 </Project>
