@@ -8,7 +8,7 @@ public class Expense
     public decimal Amount { get; set; } // Бізнес-правило: > 0
     public string Description { get; set; } // AutoFixture
     public int CategoryId { get; set; }
-    public Category Category { get; set; }
+    public Category? Category { get; set; }
     public DateTime Date { get; set; } // Бізнес-правило: не майбутнє
     public PaymentMethod PaymentMethod { get; set; }
 }
