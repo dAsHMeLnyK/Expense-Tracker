@@ -1,5 +1,6 @@
-using ExpenseTracker.Api.Data;
 using ExpenseTracker.Api.Entities;
+using ExpenseTracker.Api.Repositories;
+using ExpenseTracker.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,35 +8,46 @@ namespace ExpenseTracker.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ExpensesController(AppDbContext context) : ControllerBase
+public class ExpensesController(
+    IExpenseRepository expenseRepository, 
+    IBudgetRepository budgetRepository, 
+    IBudgetService budgetService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Expense>>> GetExpenses(
-        [FromQuery] int? categoryId, 
-        [FromQuery] DateTime? from, 
-        [FromQuery] DateTime? to,
-        [FromQuery] PaymentMethod? method) // Додано фільтр за методом оплати
+        [FromQuery] int? categoryId, [FromQuery] DateTime? from, [FromQuery] DateTime? to, [FromQuery] PaymentMethod? method)
     {
-        var query = context.Expenses.AsQueryable();
-
-        if (categoryId.HasValue) 
-            query = query.Where(e => e.CategoryId == categoryId);
-        if (from.HasValue) 
-            query = query.Where(e => e.Date >= from);
-        if (to.HasValue) 
-            query = query.Where(e => e.Date <= to);
-        if (method.HasValue)
-            query = query.Where(e => e.PaymentMethod == method);
-
-        return await query.ToListAsync();
+        var expenses = await expenseRepository.GetFilteredExpensesAsync(categoryId, from, to, method);
+        return Ok(expenses);
     }
 
     [HttpPost]
-    public async Task<ActionResult<Expense>> CreateExpense(Expense expense)
+    public async Task<ActionResult> CreateExpense(Expense expense)
     {
-        context.Expenses.Add(expense);
-        await context.SaveChangesAsync();
-        return CreatedAtAction(nameof(GetExpenses), new { id = expense.Id }, expense);
+        await expenseRepository.AddAsync(expense);
+
+        // Перевірка бізнес-правил щодо бюджету
+        var budget = await budgetRepository.GetBudgetForExpenseAsync(
+            expense.CategoryId, expense.Date.Month, expense.Date.Year, expense.UserId);
+
+        bool isNearLimit = false;
+        bool isOverBudget = false;
+        string? warningMessage = null;
+
+        if (budget != null)
+        {
+            var totalExpenses = await expenseRepository.GetTotalExpensesForBudgetAsync(
+                expense.CategoryId, expense.Date.Month, expense.Date.Year, expense.UserId);
+
+            isNearLimit = budgetService.IsNearLimit(totalExpenses, budget.MonthlyLimit);
+            isOverBudget = budgetService.IsOverLimit(totalExpenses, budget.MonthlyLimit);
+
+            if (isOverBudget) warningMessage = "Warning: Budget limit exceeded!";
+            else if (isNearLimit) warningMessage = "Warning: 80% of budget limit reached!";
+        }
+
+        var response = new { Expense = expense, IsNearLimit = isNearLimit, IsOverBudget = isOverBudget, Warning = warningMessage };
+        return CreatedAtAction(nameof(GetExpenses), new { id = expense.Id }, response);
     }
 
     [HttpPut("{id}")]
@@ -43,30 +55,25 @@ public class ExpensesController(AppDbContext context) : ControllerBase
     {
         if (id != expense.Id) return BadRequest();
 
-        context.Entry(expense).State = EntityState.Modified;
-
-        try
-        {
-            await context.SaveChangesAsync();
+        try 
+        { 
+            await expenseRepository.UpdateAsync(expense); 
         }
         catch (DbUpdateConcurrencyException)
         {
-            if (!context.Expenses.Any(e => e.Id == id)) return NotFound();
+            if (!await expenseRepository.ExistsAsync(id)) return NotFound();
             throw;
         }
-
         return NoContent();
     }
 
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteExpense(int id)
     {
-        var expense = await context.Expenses.FindAsync(id);
+        var expense = await expenseRepository.GetByIdAsync(id);
         if (expense == null) return NotFound();
-
-        context.Expenses.Remove(expense);
-        await context.SaveChangesAsync();
-
+        
+        await expenseRepository.DeleteAsync(expense);
         return NoContent();
     }
 }

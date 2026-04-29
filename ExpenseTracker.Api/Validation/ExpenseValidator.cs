@@ -2,6 +2,7 @@ using FluentValidation;
 using ExpenseTracker.Api.Entities;
 
 namespace ExpenseTracker.Api.Validation;
+
 public class ExpenseValidator : AbstractValidator<Expense>
 {
     public ExpenseValidator()
@@ -10,8 +11,9 @@ public class ExpenseValidator : AbstractValidator<Expense>
             .GreaterThan(0)
             .WithMessage("Expense amount must be greater than zero.");
 
+        // ВИПРАВЛЕНО: динамічне обчислення часу
         RuleFor(e => e.Date)
-            .LessThanOrEqualTo(DateTime.Now)
+            .Must(date => date <= DateTime.UtcNow)
             .WithMessage("Expense date cannot be in the future.");
 
         RuleFor(e => e.Description)

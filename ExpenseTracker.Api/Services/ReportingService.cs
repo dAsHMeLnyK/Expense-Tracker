@@ -14,45 +14,44 @@ public class ReportingService(AppDbContext context) : IReportingService
 {
     public async Task<IEnumerable<CategoryReportDto>> GetMonthlyReportAsync(int month, int year)
     {
-        var expenses = await context.Expenses
-            .Include(e => e.Category)
-            .Where(e => e.Date.Month == month && e.Date.Year == year)
-            .GroupBy(e => e.Category)
-            .Select(g => new
+        // ВИПРАВЛЕНО: Агрегація повністю на рівні бази даних
+        var query = await context.Categories
+            .Select(c => new
             {
-                Category = g.Key,
-                Total = g.Sum(e => e.Amount)
+                CategoryName = c.Name,
+                TotalAmount = c.Expenses
+                    .Where(e => e.Date.Month == month && e.Date.Year == year)
+                    .Sum(e => (decimal?)e.Amount) ?? 0,
+                BudgetLimit = context.Budgets
+                    .Where(b => b.CategoryId == c.Id && b.Month == month && b.Year == year)
+                    .Select(b => (decimal?)b.MonthlyLimit)
+                    .FirstOrDefault()
             })
+            .Where(x => x.TotalAmount > 0 || x.BudgetLimit != null)
             .ToListAsync();
 
-        var budgets = await context.Budgets
-            .Where(b => b.Month == month && b.Year == year)
-            .ToListAsync();
-
-        return expenses.Select(e =>
-        {
-            var budget = budgets.FirstOrDefault(b => b.CategoryId == e.Category.Id);
-            var limit = budget?.MonthlyLimit ?? 0;
-            return new CategoryReportDto(
-                e.Category.Name, 
-                e.Total, 
-                limit > 0 ? limit : null,
-                limit > 0 && e.Total > limit
-            );
-        });
+        return query.Select(x => new CategoryReportDto(
+            x.CategoryName,
+            x.TotalAmount,
+            x.BudgetLimit,
+            x.BudgetLimit.HasValue && x.TotalAmount > x.BudgetLimit.Value
+        ));
     }
 
     public async Task<MonthlySummaryDto> GetSummaryAsync()
     {
-        var expenses = await context.Expenses.Include(e => e.Category).ToListAsync();
-        if (!expenses.Any()) return new MonthlySummaryDto(0, 0, "N/A");
+        // Також оптимізовано, щоб не тягнути всі записи
+        var hasExpenses = await context.Expenses.AnyAsync();
+        if (!hasExpenses) return new MonthlySummaryDto(0, 0, "N/A");
 
-        var total = expenses.Sum(e => e.Amount);
-        var avg = expenses.Average(e => e.Amount);
-        var topCat = expenses
-            .GroupBy(e => e.Category.Name)
+        var total = await context.Expenses.SumAsync(e => e.Amount);
+        var avg = await context.Expenses.AverageAsync(e => e.Amount);
+        
+        var topCat = await context.Expenses
+            .GroupBy(e => e.Category!.Name)
             .OrderByDescending(g => g.Sum(x => x.Amount))
-            .First().Key;
+            .Select(g => g.Key)
+            .FirstOrDefaultAsync() ?? "N/A";
 
         return new MonthlySummaryDto(total, avg, topCat);
     }
