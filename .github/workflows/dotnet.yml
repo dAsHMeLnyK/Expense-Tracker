@@ -10,6 +10,22 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    # 1. Піднімаємо PostgreSQL сервіс спеціально для запуску API в GitHub Actions
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: ExpenseTrackerDb
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
 
@@ -24,6 +40,34 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release --no-restore
 
-      - name: Test
-        # Додаємо прапорець collect для звітів, якщо захочете бачити покриття
+      - name: Test (Unit, Integration, DB)
         run: dotnet test --configuration Release --no-build --verbosity normal
+
+      # 2. Встановлюємо k6 на віртуальну машину GitHub
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install k6
+
+      # 3. Запускаємо API у фоновому режимі
+      - name: Run API in background
+        env:
+          # Перевизначаємо рядок підключення, щоб API використовувало БД з сервісу GitHub Actions (крок 1)
+          # Якщо ваш рядок підключення називається інакше, замініть "DefaultConnection" у назві змінної.
+          ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=expensetracker;Username=postgres;Password=password"
+        run: |
+          # Запускаємо проект на тому ж порту (5191), який вказано у ваших k6 скриптах
+          dotnet run --project ExpenseTracker.Api/ExpenseTracker.Api.csproj --configuration Release --urls "http://localhost:5191" &
+          
+          # Даємо API 15 секунд на запуск, підключення до БД та застосування EnsureCreated/Seeding
+          sleep 15
+
+      # 4. Запускаємо тести продуктивності
+      - name: Run k6 Load Test (Reports)
+        run: k6 run PerformanceTests/load-test-reports.js
+
+      - name: Run k6 Stress Test (Expenses)
+        run: k6 run PerformanceTests/stress-test-expenses.js
