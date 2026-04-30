@@ -19,8 +19,7 @@ public class ExpenseApiTests(ApiWebApplicationFactory factory)
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await context.Database.EnsureCreatedAsync();
-
-        // Створюємо категорію один раз для обох тестів у класі
+        
         var category = new Category { Name = "TestCategory", Icon = "🔍", Color = "#000" };
         context.Categories.Add(category);
         await context.SaveChangesAsync();
@@ -72,8 +71,7 @@ public class ExpenseApiTests(ApiWebApplicationFactory factory)
     
         var postRes = await _client.PostAsJsonAsync("/api/expenses", expense);
         postRes.EnsureSuccessStatusCode();
-
-        // ВИПРАВЛЕНО: Читаємо JSON вузол і дістаємо ID з вкладеного об'єкта expense
+        
         var responseNode = await postRes.Content.ReadFromJsonAsync<System.Text.Json.Nodes.JsonNode>();
         var savedExpenseId = responseNode!["expense"]!["id"]!.GetValue<int>();
 
@@ -101,7 +99,7 @@ public class ExpenseApiTests(ApiWebApplicationFactory factory)
 
         var expense = new Expense 
         { 
-            Amount = 85, // 85% від 100
+            Amount = 85,
             Description = "Test 80 percent limit", Date = DateTime.UtcNow, PaymentMethod = PaymentMethod.Card, CategoryId = category.Id, UserId = 1 
         };
 
@@ -111,7 +109,6 @@ public class ExpenseApiTests(ApiWebApplicationFactory factory)
         // Assert
         response.EnsureSuccessStatusCode();
         
-        // Оскільки ми повертаємо анонімний об'єкт, читаємо його як JsonNode або Dictionary
         var result = await response.Content.ReadFromJsonAsync<System.Text.Json.Nodes.JsonNode>();
         result.ShouldNotBeNull();
         
@@ -126,7 +123,6 @@ public class ExpenseApiTests(ApiWebApplicationFactory factory)
     [Fact]
     public async Task UpdateExpense_ShouldModifyExistingRecord()
     {
-        // Arrange: Створюємо початковий запис
         var expense = new Expense 
         { 
             Amount = 50.00m, 
@@ -142,8 +138,7 @@ public class ExpenseApiTests(ApiWebApplicationFactory factory)
     
         var responseNode = await postRes.Content.ReadFromJsonAsync<System.Text.Json.Nodes.JsonNode>();
         var savedExpenseId = responseNode!["expense"]!["id"]!.GetValue<int>();
-
-        // Підготовлюємо об'єкт для оновлення (обов'язково передаємо правильний Id)
+        
         var updatedExpense = new Expense 
         { 
             Id = savedExpenseId,
@@ -154,11 +149,9 @@ public class ExpenseApiTests(ApiWebApplicationFactory factory)
             CategoryId = _sharedCategoryId, 
             UserId = 1 
         };
-
-        // Act: Виконуємо PUT запит
+        
         var putRes = await _client.PutAsJsonAsync($"/api/expenses/{savedExpenseId}", updatedExpense);
-
-        // Assert: Перевіряємо статус та те, що дані дійсно змінилися
+        
         putRes.EnsureSuccessStatusCode();
 
         var getRes = await _client.GetAsync($"/api/expenses?categoryId={_sharedCategoryId}");

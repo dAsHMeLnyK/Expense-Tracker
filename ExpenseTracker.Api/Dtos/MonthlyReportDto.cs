@@ -3,8 +3,8 @@ namespace ExpenseTracker.Api.Dtos;
 public record CategoryReportDto(
     string CategoryName, 
     decimal TotalAmount, 
-    decimal? BudgetLimit,     // Додано
-    bool IsOverBudget         // Додано (прапорець)
+    decimal? BudgetLimit,
+    bool IsOverBudget
 );
 
 public record MonthlySummaryDto(

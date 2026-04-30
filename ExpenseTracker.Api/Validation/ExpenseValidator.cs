@@ -10,8 +10,7 @@ public class ExpenseValidator : AbstractValidator<Expense>
         RuleFor(e => e.Amount)
             .GreaterThan(0)
             .WithMessage("Expense amount must be greater than zero.");
-
-        // ВИПРАВЛЕНО: динамічне обчислення часу
+        
         RuleFor(e => e.Date)
             .Must(date => date <= DateTime.UtcNow)
             .WithMessage("Expense date cannot be in the future.");

@@ -5,10 +5,10 @@ public class Expense
 {
     public int Id { get; set; }
     public int UserId { get; set; }
-    public decimal Amount { get; set; } // Бізнес-правило: > 0
-    public string Description { get; set; } // AutoFixture
+    public decimal Amount { get; set; }
+    public string Description { get; set; }
     public int CategoryId { get; set; }
     public Category? Category { get; set; }
-    public DateTime Date { get; set; } // Бізнес-правило: не майбутнє
+    public DateTime Date { get; set; }
     public PaymentMethod PaymentMethod { get; set; }
 }

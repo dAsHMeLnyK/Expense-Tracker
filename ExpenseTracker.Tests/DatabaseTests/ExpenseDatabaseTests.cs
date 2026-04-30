@@ -19,10 +19,8 @@ public class ExpenseDatabaseTests(PostgreSqlFixture fixture)
 
         _context = new AppDbContext(options);
         
-        // Створюємо схему в реальному Postgres
         await _context.Database.EnsureCreatedAsync();
-        
-        // Очищуємо дані перед кожним тестом
+
         await _context.Database.ExecuteSqlRawAsync("TRUNCATE TABLE \"Expenses\", \"Budgets\", \"Categories\" CASCADE");
     }
 
@@ -48,8 +46,7 @@ public class ExpenseDatabaseTests(PostgreSqlFixture fixture)
         { 
             UserId = 1, CategoryId = category.Id, Month = 5, Year = 2026, MonthlyLimit = 2000 
         };
-
-        // Перевіряємо, що реальний Postgres викине помилку унікальності (наш Index в OnModelCreating)
+        
         await Should.ThrowAsync<DbUpdateException>(async () => 
         {
             await _context.Budgets.AddAsync(budget2);
@@ -70,7 +67,7 @@ public class ExpenseDatabaseTests(PostgreSqlFixture fixture)
             Amount = 50, 
             CategoryId = category.Id, 
             UserId = 1, 
-            Date = DateTime.UtcNow, // ЗМІНЕНО: тепер UtcNow замість Now
+            Date = DateTime.UtcNow,
             Description = "Taxi", 
             PaymentMethod = PaymentMethod.Card 
         });
@@ -92,8 +89,7 @@ public class ExpenseDatabaseTests(PostgreSqlFixture fixture)
         var category = new Category { Name = "Food", Icon = "🍔", Color = "Red" };
         _context.Categories.Add(category);
         await _context.SaveChangesAsync();
-
-        // Додаємо кілька витрат в одну категорію
+        
         _context.Expenses.AddRange(
             new Expense { Amount = 150.50m, CategoryId = category.Id, UserId = 1, Date = DateTime.UtcNow, Description = "Lunch", PaymentMethod = PaymentMethod.Card },
             new Expense { Amount = 49.50m, CategoryId = category.Id, UserId = 1, Date = DateTime.UtcNow, Description = "Coffee", PaymentMethod = PaymentMethod.Cash }
@@ -120,14 +116,12 @@ public class ExpenseDatabaseTests(PostgreSqlFixture fixture)
         var category = new Category { Name = "Rent", Icon = "🏠", Color = "Blue" };
         _context.Categories.Add(category);
         await _context.SaveChangesAsync();
-
-        // Юзер 1 ставить бюджет
+        
         _context.Budgets.Add(new Budget 
         { 
             UserId = 1, CategoryId = category.Id, Month = 6, Year = 2026, MonthlyLimit = 1000 
         });
-
-        // Юзер 2 ТАКОЖ ставить бюджет на ту саму категорію і той самий місяць
+        
         _context.Budgets.Add(new Budget 
         { 
             UserId = 2, CategoryId = category.Id, Month = 6, Year = 2026, MonthlyLimit = 1500 
@@ -137,7 +131,7 @@ public class ExpenseDatabaseTests(PostgreSqlFixture fixture)
         var exception = await Record.ExceptionAsync(async () => await _context.SaveChangesAsync());
 
         // Assert
-        exception.ShouldBeNull(); // Помилки не має бути, бо UserId різні
+        exception.ShouldBeNull();
         var count = await _context.Budgets.CountAsync();
         count.ShouldBe(2);
     }

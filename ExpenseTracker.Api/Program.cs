@@ -10,15 +10,12 @@ AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Налаштування бази даних PostgreSQL
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 2. Реєстрація FluentValidation
 builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-// 3. Реєстрація бізнес-сервісів
 builder.Services.AddScoped<IBudgetService, BudgetService>();
 builder.Services.AddScoped<IReportingService, ReportingService>();
 builder.Services.AddScoped<IExpenseRepository, ExpenseRepository>();
@@ -37,20 +34,12 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<AppDbContext>();
         
-        // Видаляємо стару базу і створюємо нову чисту
-        context.Database.EnsureDeleted();
-        context.Database.EnsureCreated(); 
-
-        // СІДІНГ ДЛЯ K6: Створюємо категорію, щоб CategoryId = 1 точно існував
-        if (!context.Categories.Any())
+        if (app.Environment.IsDevelopment())
         {
-            context.Categories.Add(new Category 
-            { 
-                Name = "Stress Test Category", 
-                Icon = "🔥", 
-                Color = "#FF0000" 
-            });
-            context.SaveChanges();
+            context.Database.EnsureDeleted();
+            context.Database.EnsureCreated(); 
+            
+            DataSeeder.SeedDataAsync(context).Wait();
         }
     }
     catch (Exception ex)

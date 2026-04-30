@@ -25,8 +25,7 @@ public class ExpensesController(
     public async Task<ActionResult> CreateExpense(Expense expense)
     {
         await expenseRepository.AddAsync(expense);
-
-        // Перевірка бізнес-правил щодо бюджету
+        
         var budget = await budgetRepository.GetBudgetForExpenseAsync(
             expense.CategoryId, expense.Date.Month, expense.Date.Year, expense.UserId);
 

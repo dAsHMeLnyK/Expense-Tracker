@@ -10,7 +10,6 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
-    # 1. Піднімаємо PostgreSQL сервіс спеціально для запуску API в GitHub Actions
     services:
       postgres:
         image: postgres:latest
@@ -43,7 +42,6 @@ jobs:
       - name: Test (Unit, Integration, DB)
         run: dotnet test --configuration Release --no-build --verbosity normal
 
-      # 2. Встановлюємо k6 на віртуальну машину GitHub
       - name: Install k6
         run: |
           sudo gpg -k
@@ -51,21 +49,15 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
           sudo apt-get update
           sudo apt-get install k6
-
-      # 3. Запускаємо API у фоновому режимі
+і
       - name: Run API in background
         env:
-          # Перевизначаємо рядок підключення, щоб API використовувало БД з сервісу GitHub Actions (крок 1)
-          # Якщо ваш рядок підключення називається інакше, замініть "DefaultConnection" у назві змінної.
+          ASPNETCORE_ENVIRONMENT: Development
           ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=expensetracker;Username=postgres;Password=password"
         run: |
-          # Запускаємо проект на тому ж порту (5191), який вказано у ваших k6 скриптах
           dotnet run --project ExpenseTracker.Api/ExpenseTracker.Api.csproj --configuration Release --urls "http://localhost:5191" &
-          
-          # Даємо API 15 секунд на запуск, підключення до БД та застосування EnsureCreated/Seeding
           sleep 15
 
-      # 4. Запускаємо тести продуктивності
       - name: Run k6 Load Test (Reports)
         run: k6 run PerformanceTests/load-test-reports.js
 

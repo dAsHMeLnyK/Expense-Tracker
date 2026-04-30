@@ -14,10 +14,10 @@ public class BudgetServiceTests
     }
 
     [Theory]
-    [InlineData(80, 100, true)]  // Рівно 80%
-    [InlineData(85, 100, true)]  // Більше 80%
-    [InlineData(79, 100, false)] // Менше 80%
-    [InlineData(120, 100, true)] // Перевищення 100% також є "близько до ліміту"
+    [InlineData(80, 100, true)]
+    [InlineData(85, 100, true)]
+    [InlineData(79, 100, false)]
+    [InlineData(120, 100, true)]
     public void IsNearLimit_ShouldReturnExpectedResult(decimal current, decimal limit, bool expected)
     {
         // Act
