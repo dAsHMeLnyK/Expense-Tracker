@@ -32,7 +32,7 @@ public class BudgetsController(IBudgetRepository repository) : ControllerBase
             return BadRequest(new { Message = "A budget for this category has already been set for this month." });
         }
     }
-
+ 
     [HttpPut("{id}")]
     public async Task<IActionResult> PutBudget(int id, Budget budget)
     {
