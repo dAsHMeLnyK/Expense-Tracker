@@ -16,7 +16,6 @@ public class ReportingIntegrationTests(ApiWebApplicationFactory factory)
     {
         _client = factory.CreateClient();
         
-        // Наповнюємо базу 10к записами ОДИН раз для всіх тестів у цьому класі
         using var scope = factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await context.Database.EnsureCreatedAsync();
@@ -55,8 +54,6 @@ public class ReportingIntegrationTests(ApiWebApplicationFactory factory)
         var report = await response.Content.ReadFromJsonAsync<List<CategoryReportDto>>();
         
         report.ShouldNotBeNull();
-        // Перевіряємо, чи повернулися дані (оскільки Seeder генерує випадкові дати, 
-        // хоча б декілька записів мають потрапити в поточний місяць)
         report.Count.ShouldBeGreaterThanOrEqualTo(0);
     }
 }

@@ -14,7 +14,6 @@ public class ReportingService(AppDbContext context) : IReportingService
 {
     public async Task<IEnumerable<CategoryReportDto>> GetMonthlyReportAsync(int month, int year)
     {
-        // ВИПРАВЛЕНО: Агрегація повністю на рівні бази даних
         var query = await context.Categories
             .Select(c => new
             {
@@ -40,7 +39,6 @@ public class ReportingService(AppDbContext context) : IReportingService
 
     public async Task<MonthlySummaryDto> GetSummaryAsync()
     {
-        // Також оптимізовано, щоб не тягнути всі записи
         var hasExpenses = await context.Expenses.AnyAsync();
         if (!hasExpenses) return new MonthlySummaryDto(0, 0, "N/A");
 

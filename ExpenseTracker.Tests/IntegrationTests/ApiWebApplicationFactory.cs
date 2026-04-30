@@ -10,8 +10,6 @@ using Testcontainers.PostgreSql;
 using Xunit;
 
 namespace ExpenseTracker.Tests.IntegrationTests;
-
-// Явно вказуємо ExpenseTracker.Api.Program, щоб уникнути плутанини
 public class ApiWebApplicationFactory : WebApplicationFactory<global::Program>, IAsyncLifetime
 {
     private readonly PostgreSqlContainer _dbContainer = new PostgreSqlBuilder()

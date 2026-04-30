@@ -14,8 +14,7 @@ public class ExpenseValidationTests
     public ExpenseValidationTests()
     {
         _fixture = new Fixture();
-
-        // Фікс для цикулічних посилань (Circular References)
+        
         _fixture.Behaviors.OfType<ThrowingRecursionBehavior>().ToList()
             .ForEach(b => _fixture.Behaviors.Remove(b));
         _fixture.Behaviors.Add(new OmitOnRecursionBehavior());
